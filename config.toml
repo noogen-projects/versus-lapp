@@ -1,0 +1,12 @@
+[application]
+title = "Versus"
+enabled = true
+autoload = true
+description = "A simple and powerful lapp to compare anything"
+tags = ["compare", "tool"]
+access_token = ""
+additional_static_dirs = ["data"]
+
+[permissions]
+required = ["file_read", "file_write", "client_http"]
+allowed = ["file_read", "file_write", "client_http"]

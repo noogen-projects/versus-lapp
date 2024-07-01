@@ -1,0 +1,152 @@
+[config]
+default_to_workspace = false
+additional_profiles = ["debug"]
+
+[env]
+APP = "versus"
+DIST = "target/dist"
+
+[tasks.choose_profile.env]
+MODE = "release"
+ADDITIONAL = "--release"
+
+    [tasks.choose_profile.env.debug]
+    MODE = "debug"
+    ADDITIONAL = "--color=auto" # it's a stub
+
+[tasks.parse_params]
+script_runner = "@duckscript"
+script = '''
+if not is_empty ${1}
+    set_env APP ${1}
+end
+'''
+
+[tasks.wasm_build_prepare]
+dependencies = ["choose_profile", "parse_params"]
+
+    [tasks.wasm_build_prepare.env]
+    RUSTFLAGS = "-Copt-level=s"
+
+        [tasks.wasm_build_prepare.env.debug]
+        RUSTFLAGS = ""
+
+
+[tasks.create_lapp_dir]
+script_runner = "@duckscript"
+script = "mkdir ${DIST}/${APP}"
+dependencies = ["parse_params"]
+
+[tasks.copy_data]
+script_runner = "@duckscript"
+script = '''
+if is_path_exists data
+    rm -r ${DIST}/${APP}/data
+    if not eq ${APP} "laplace"
+        cp data ${DIST}/${APP}/
+    end
+end
+'''
+dependencies = ["create_lapp_dir"]
+
+[tasks.copy_static]
+script_runner = "@duckscript"
+script = '''
+rm -r ${DIST}/${APP}/static
+if not eq ${APP} "laplace"
+    cp static ${DIST}/${APP}/
+end
+'''
+dependencies = ["create_lapp_dir"]
+
+[tasks.copy_config]
+script_runner = "@duckscript"
+script = '''
+if is_path_exists config.toml
+    rm ${DIST}/${APP}/config.toml
+    cp config.toml ${DIST}/${APP}/config.toml
+end
+'''
+dependencies = ["create_lapp_dir"]
+
+
+[tasks.build_client]
+toolchain = "stable"
+command = "cargo"
+args = ["build", "-p", "${APP}_client", "--target", "wasm32-unknown-unknown", "${ADDITIONAL}"]
+dependencies = ["wasm_build_prepare"]
+
+[tasks.build_server]
+toolchain = "stable"
+command = "cargo"
+args = ["build", "-p", "${APP}_server", "--target", "wasm32-unknown-unknown", "${ADDITIONAL}"]
+dependencies = ["wasm_build_prepare"]
+
+[tasks.build_server_wasi]
+env = { RUSTFLAGS = "${RUSTFLAGS} -C lto=no -Z wasi-exec-model=reactor" }
+toolchain = "nightly"
+command = "cargo"
+args = ["build", "-p", "${APP}_server", "--target", "wasm32-wasi", "${ADDITIONAL}"]
+dependencies = ["wasm_build_prepare"]
+
+
+[tasks.deploy_client]
+command = "wasm-bindgen"
+args = [
+    "--target",
+    "web",
+    "--no-typescript",
+    "--out-dir",
+    "${DIST}/${APP}/static",
+    "--out-name",
+    "${APP}_client",
+    "target/wasm32-unknown-unknown/${MODE}/${APP}_client.wasm",
+]
+dependencies = ["choose_profile", "copy_static", "copy_data"]
+
+[tasks.deploy_server]
+script_runner = "@duckscript"
+script = '''
+rm ${DIST}/${APP}/${APP}_server.wasm
+cp target/wasm32-unknown-unknown/${MODE}/${APP}_server.wasm ${DIST}/${APP}/${APP}_server.wasm
+'''
+dependencies = ["choose_profile", "copy_config"]
+
+[tasks.deploy_server_wasi]
+script_runner = "@duckscript"
+script = '''
+rm ${DIST}/${APP}/${APP}_server.wasm
+cp target/wasm32-wasi/${MODE}/${APP}_server.wasm ${DIST}/${APP}/${APP}_server.wasm
+'''
+dependencies = ["choose_profile", "copy_config"]
+
+
+[tasks.client]
+dependencies = ["build_client", "deploy_client"]
+
+[tasks.server]
+dependencies = ["build_server", "deploy_server"]
+
+[tasks.wasi]
+dependencies = ["build_server_wasi", "deploy_server_wasi"]
+
+[tasks.all]
+run_task = [
+    { name = ["client", "wasi"] },
+]
+
+
+[tasks.watch]
+toolchain = "stable"
+command = "cargo"
+args = ["watch", "-w", "client", "-w", "static", "-x", "make client"]
+
+
+[tasks.lar]
+script_runner = "@shell"
+script = '''
+rm -f ${DIST}/${APP}.lar
+cd ${DIST}
+zip -r ${APP}.lar ${APP}
+'''
+dependencies = ["all"]
