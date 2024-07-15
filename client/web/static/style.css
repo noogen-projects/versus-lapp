@@ -1,0 +1,8 @@
+:root {
+    font-family: 'Roboto', system-ui, sans-serif;
+}
+
+label {
+    display: flex;
+    align-items: center;
+}

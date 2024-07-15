@@ -54,7 +54,7 @@ script_runner = "@duckscript"
 script = '''
 rm -r ${DIST}/${APP}/static
 if not eq ${APP} "laplace"
-    cp static ${DIST}/${APP}/
+    cp client/web/static ${DIST}/${APP}/
 end
 '''
 dependencies = ["create_lapp_dir"]
@@ -69,12 +69,21 @@ end
 '''
 dependencies = ["create_lapp_dir"]
 
+[tasks.install_scripts]
+command = "npm"
+args = ["install"]
+
+[tasks.rollup_scripts]
+command = "npx"
+args = [
+    "rollup", "-p", "@rollup/plugin-node-resolve", "client/web/material_web.index.js", "-o", "${DIST}/${APP}/static/material_web.bundle.js"
+]
 
 [tasks.build_client]
 toolchain = "stable"
 command = "cargo"
 args = ["build", "-p", "${APP}_client", "--target", "wasm32-unknown-unknown", "${ADDITIONAL}"]
-dependencies = ["wasm_build_prepare"]
+dependencies = ["wasm_build_prepare", "install_scripts"]
 
 [tasks.build_server]
 toolchain = "stable"
@@ -102,7 +111,7 @@ args = [
     "${APP}_client",
     "target/wasm32-unknown-unknown/${MODE}/${APP}_client.wasm",
 ]
-dependencies = ["choose_profile", "copy_static", "copy_data"]
+dependencies = ["choose_profile", "copy_static", "copy_data", "rollup_scripts"]
 
 [tasks.deploy_server]
 script_runner = "@duckscript"
@@ -139,7 +148,7 @@ run_task = [
 [tasks.watch]
 toolchain = "stable"
 command = "cargo"
-args = ["watch", "-w", "client", "-w", "static", "-x", "make client"]
+args = ["watch", "-w", "client", "-x", "make client"]
 
 
 [tasks.lar]

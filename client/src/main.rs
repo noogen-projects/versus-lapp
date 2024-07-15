@@ -57,6 +57,14 @@ fn App() -> impl IntoView {
     };
 
     view! {
+        <label>
+            Material 3
+            <md-checkbox checked></md-checkbox>
+        </label>
+
+        <md-outlined-button>Back</md-outlined-button>
+        <md-filled-button>Next</md-filled-button>
+
         <div>
             <h1>"versus"</h1>
             <form on:submit = on_send>

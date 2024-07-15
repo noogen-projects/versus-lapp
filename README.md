@@ -9,6 +9,9 @@ To build this project, you need to have the following tools installed:
 - Rust: https://www.rust-lang.org/tools/install
 - `cargo-make`: https://github.com/sagiegurari/cargo-make?tab=readme-ov-file#installation
 - `wasm-bindgen-cli`: https://github.com/rustwasm/wasm-bindgen?tab=readme-ov-file#install-wasm-bindgen-cli
+- Node.js (with `npm` and `npx`): https://nodejs.org (for material web UI components)
+
+## Installing tools
 
 For installing these tools, execute the following commands:
 
@@ -25,6 +28,12 @@ In addition, you need to install the required toolchains and compilation targets
 rustup toolchain install stable nightly
 rustup target add wasm32-unknown-unknown --toolchain stable
 rustup target add wasm32-wasi --toolchain nightly
+```
+
+Install node modules for material web, Rollup and a plugin to resolve bare module specifiers:
+
+```shell
+npm install
 ```
 
 To run the application, you need to have `laplace` installed. If you don't have it, you can install it with the following command:
